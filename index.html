@@ -534,8 +534,12 @@ function saveManualResults(){
         }
     }
     if(hasChanges){
-        saveResultsToSheets();
-        saveDataLocally();
+        // حفظ في localStorage مباشرة
+        localStorage.setItem("vm_data", JSON.stringify({
+            players: allPlayers,
+            locked: isLocked,
+            results: actualResults
+        }));
         updateUI();
         document.getElementById("updateStatus").innerHTML="✅ تم التحديث!";
         document.getElementById("updateStatus").className="update-status success";
@@ -549,7 +553,6 @@ function saveManualResults(){
     }
     document.getElementById("manualResultPopup").classList.remove("active");
 }
-
 function manualUpdate(){
     openManualUpdatePopup();
 }
