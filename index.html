@@ -268,6 +268,129 @@
             margin-top: 1rem;
             flex-wrap: wrap;
         }
+        /* ===== Code Export Modal Styles ===== */
+        .code-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+        .code-modal-overlay.active { display: flex; }
+        .code-modal {
+            background: white;
+            border-radius: 1rem;
+            width: 100%;
+            max-width: 700px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .code-modal-header {
+            background: linear-gradient(135deg, #0a2e1f, #1a4735);
+            color: #FFD700;
+            padding: 1rem 1.5rem;
+            border-radius: 1rem 1rem 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .code-modal-header h3 { margin: 0; font-size: 1.1rem; }
+        .code-modal-close {
+            background: none;
+            border: none;
+            color: #FFD700;
+            font-size: 1.5rem;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        .code-modal-close:hover { background: rgba(255,255,255,0.2); }
+        .code-modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .code-block-wrapper {
+            position: relative;
+            background: #1e1e1e;
+            border-radius: 0.8rem;
+            overflow: hidden;
+        }
+        .code-block-header {
+            background: #2d2d2d;
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #3d3d3d;
+        }
+        .code-block-header span {
+            color: #aaa;
+            font-size: 0.75rem;
+            font-family: monospace;
+        }
+        .copy-code-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.3rem 0.8rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .copy-code-btn:hover { background: #059669; }
+        .copy-code-btn.copied { background: #3b82f6; }
+        #generatedCodeArea {
+            width: 100%;
+            min-height: 200px;
+            max-height: 400px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border: none;
+            padding: 1rem;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+        }
+        .code-modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+        .download-btn {
+            background: #3b82f6;
+            color: white;
+        }
+        .instructions-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 0.8rem 1rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            margin-bottom: 1rem;
+            font-size: 0.8rem;
+            color: #92400e;
+        }
+        .instructions-box strong { color: #78350f; }
     </style>
 </head>
 <body>
@@ -592,18 +715,12 @@
             setTimeout(() => hideSaveStatus(), 3000);
         }
 
-        function hideSaveStatus() {
-            const statusEl = document.getElementById("saveStatus");
-            statusEl.className = 'save-status hidden';
-            statusEl.style.display = 'none';
-        }
-
-        function saveResults(closePanel = false) {
-            const selects = document.querySelectorAll(".result-select");
+                function saveResults(closePanel = false) {
+            let selects = document.querySelectorAll(".result-select");
             let changed = 0;
             selects.forEach(sel => {
-                const matchId = parseInt(sel.dataset.match);
-                const val = sel.value;
+                let matchId = parseInt(sel.dataset.match);
+                let val = sel.value;
                 if (val === "") {
                     actualResults[matchId] = null;
                 } else {
@@ -615,9 +732,10 @@
             updateUI();
             
             if (changed > 0) {
-                showSaveStatus(`✅ ${changed} resultat sparade!`, true);
+                showSaveStatus('✅ ' + changed + ' resultat sparade!', true);
+                setTimeout(() => showCodeModal(), 500);
             } else {
-                showSaveStatus(`ℹ️ Inga ändringar att spara`, true);
+                showSaveStatus('ℹ️ Inga ändringar att spara', true);
             }
             
             if (closePanel) {
@@ -661,6 +779,60 @@
             document.getElementById("multiImport").value = "";
             document.getElementById("selectedFilesCount").textContent = "Ingen fil vald";
         }
+        // ===== CODE EXPORT FUNCTIONS =====
+        function generateResultsCode() {
+            let code = '// ===== EMBEDDED RESULTS - Generated ' + new Date().toLocaleString('sv-SE') + ' =====\n';
+            code += 'let actualResults = {\n';
+            let entries = [];
+            for (let i = 0; i < 72; i++) {
+                let val = actualResults[i];
+                entries.push('    ' + i + ': ' + (val !== null && val !== undefined ? '"' + val + '"' : 'null'));
+            }
+            code += entries.join(',\n');
+            code += '\n};\n';
+            code += '// ===== END EMBEDDED RESULTS =====';
+            return code;
+        }
+
+        function showCodeModal() {
+            document.getElementById('generatedCodeArea').value = generateResultsCode();
+            document.getElementById('codeModalOverlay').classList.add('active');
+        }
+
+        function hideCodeModal() {
+            document.getElementById('codeModalOverlay').classList.remove('active');
+        }
+
+        function copyCodeToClipboard() {
+            let textarea = document.getElementById('generatedCodeArea');
+            textarea.select();
+            try {
+                navigator.clipboard.writeText(textarea.value).then(() => {
+                    let btn = document.getElementById('copyCodeBtn');
+                    btn.textContent = '✅ Kopierad!';
+                    btn.classList.add('copied');
+                    setTimeout(() => { btn.textContent = '📋 Kopiera'; btn.classList.remove('copied'); }, 2000);
+                });
+            } catch(err) {
+                document.execCommand('copy');
+                let btn = document.getElementById('copyCodeBtn');
+                btn.textContent = '✅ Kopierad!';
+                setTimeout(() => btn.textContent = '📋 Kopiera', 2000);
+            }
+        }
+
+        function downloadCodeAsFile() {
+            let code = document.getElementById('generatedCodeArea').value;
+            let blob = new Blob([code], { type: 'application/javascript' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = 'vm_results_' + new Date().toISOString().slice(0,10) + '.js';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
 
 document.addEventListener("DOMContentLoaded", () => {
             loadData();
@@ -690,6 +862,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("selectedFilesCount").textContent = c === 0 ? "Ingen fil vald" : (c === 1 ? "1 fil vald" : c + " filer valda");
             };
             document.getElementById("importFilesBtn").onclick = importExcelFile;
+            // Code modal listeners
+            document.getElementById("codeModalClose").onclick = hideCodeModal;
+            document.getElementById("doneBtn").onclick = hideCodeModal;
+            document.getElementById("copyCodeBtn").onclick = copyCodeToClipboard;
+            document.getElementById("downloadCodeBtn").onclick = downloadCodeAsFile;
+            document.getElementById("codeModalOverlay").onclick = (e) => {
+                if (e.target === document.getElementById("codeModalOverlay")) hideCodeModal();
+            };
 
             document.getElementById("publicPlayerSelector").onchange = (e) => {
                 currentViewPlayer = e.target.value || null;
@@ -697,5 +877,35 @@ document.addEventListener("DOMContentLoaded", () => {
             };
         });
     </script>
+    <!-- Code Export Modal -->
+    <div class="code-modal-overlay" id="codeModalOverlay">
+        <div class="code-modal">
+            <div class="code-modal-header">
+                <h3>📋 Exportera resultatkod för GitHub</h3>
+                <button class="code-modal-close" id="codeModalClose">&times;</button>
+            </div>
+            <div class="code-modal-body">
+                <div class="instructions-box">
+                    <strong>🔧 Instruktioner:</strong><br>
+                    1. Kopiera koden nedan<br>
+                    2. Klistra in den i din HTML-fil <strong>innan</strong> du laddar upp till GitHub<br>
+                    3. Ersätt den befintliga <code>actualResults</code>-deklarationen med denna kod<br>
+                    4. Resultaten kommer nu att vara permanenta på GitHub Pages!
+                </div>
+                <p>Nedan är den genererade JavaScript-koden med alla matchresultat.</p>
+                <div class="code-block-wrapper">
+                    <div class="code-block-header">
+                        <span>results_export.js</span>
+                        <button class="copy-code-btn" id="copyCodeBtn">📋 Kopiera</button>
+                    </div>
+                    <textarea id="generatedCodeArea" readonly></textarea>
+                </div>
+            </div>
+            <div class="code-modal-footer">
+                <button class="btn btn-primary download-btn" id="downloadCodeBtn">💾 Ladda ner .js-fil</button>
+                <button class="btn btn-success" id="doneBtn">✅ Klar</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
