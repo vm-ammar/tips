@@ -412,7 +412,15 @@ function saveDataLocally() {
 }
 
 function loadData() {
-    loadDataFromSheets();
+    // loadDataFromSheets();  // علق هذا السطر
+    var saved = localStorage.getItem("vm_data");
+    if(saved){
+        var data = JSON.parse(saved);
+        allPlayers = data.players || {};
+        isLocked = data.locked || false;
+        if(data.results) actualResults = data.results;
+    }
+    updateUI();
 }
 
 function calculatePoints(playerData){
@@ -424,13 +432,13 @@ function calculatePoints(playerData){
         if(actual && tip.toLowerCase()===actual.toLowerCase()) total++;
     }
     return total;
-}
+}   // <--- نهاية calculatePoints
 
 function getTipClass(tip,matchId){
     var actual=actualResults[matchId];
     if(!actual) return 'tip-pending';
     return tip.toLowerCase()===actual.toLowerCase()?'tip-correct':'tip-wrong';
-}
+}   // <--- نهاية getTipClass
 
 function updateUI(){
     var selector=document.getElementById("publicPlayerSelector");
@@ -701,6 +709,11 @@ document.addEventListener("DOMContentLoaded",function(){
         updateUI();
     };
 });
+function testSave() {
+    allPlayers["Test"] = { tips: {}, totalGoals: 0 };
+    localStorage.setItem("test_data", JSON.stringify(allPlayers));
+    alert("تم الحفظ: " + localStorage.getItem("test_data"));
+}
 </script>
 </body>
 </html>
